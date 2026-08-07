@@ -17,12 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $room_number = trim($_POST['room_number']);
         $floor = (int) $_POST['floor'];
         $capacity = max(1, (int) $_POST['capacity']);
+        $price_per_term = (float) ($_POST['price_per_term'] ?? 0);
         $room_type = $_POST['room_type'];
         $status = $_POST['status'];
         $image = null;
 
        if (!empty($_FILES['image']['name'])) {
-          // Shared root-level uploads folder, visible to both the admin and student areas
           $folder = __DIR__ . '/../uploads/rooms/';
           if (!file_exists($folder)) {
               mkdir($folder, 0777, true);
@@ -33,19 +33,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
 
         if ($id > 0) {
-            $stmt = $pdo->prepare('UPDATE rooms SET building_id=?, room_number=?, floor=?, capacity=?, room_type=?, status=? WHERE id=?');
-            $stmt->execute([$building_id, $room_number, $floor, $capacity, $room_type, $status, $id]);
+            $stmt = $pdo->prepare('UPDATE rooms SET building_id=?, room_number=?, floor=?, capacity=?, price_per_term=?, room_type=?, status=? WHERE id=?');
+            $stmt->execute([$building_id, $room_number, $floor, $capacity, $price_per_term, $room_type, $status, $id]);
             set_flash('success', "Room $room_number updated.");
         } else {
-            $stmt = $pdo->prepare('INSERT INTO rooms (building_id, room_number, floor, capacity, room_type, status) VALUES (?,?,?,?,?,?)');
-            $stmt->execute([$building_id, $room_number, $floor, $capacity, $room_type, $status]);
+            $stmt = $pdo->prepare('INSERT INTO rooms (building_id, room_number, floor, capacity,price_per_term, room_type, status) VALUES (?,?,?,?,?,?,?)');
+            $stmt->execute([$building_id, $room_number, $floor, $capacity,  $price_per_term, $room_type, $status]);
             
             if ($image) {
                $room_id = $pdo->lastInsertId();
-               $stmt = $pdo->prepare(
-              'INSERT INTO room_images (room_id, image) VALUES (?, ?)'
-               );
-               $stmt->execute([$room_id, $image]);
+               $stmt = $pdo->prepare('UPDATE rooms SET room_image = ? WHERE id = ?');
+               $stmt->execute([$image, $room_id]);
             }
 
             set_flash('success', "Room $room_number added.");
@@ -123,6 +121,10 @@ require __DIR__ . '/includes/layout_top.php';
             <div class="field">
                 <label>Capacity (beds)</label>
                 <input type="number" min="1" name="capacity" value="<?= e($editRoom['capacity'] ?? 2) ?>" required>
+            </div>
+            <div class="field">
+                 <label>Price per Term</label>
+                <input type="number" step="0.01" min="0" name="price_per_term" value="<?= e($editRoom['price_per_term'] ?? 0) ?>" required>
             </div>
             <div class="field">
                 <label>Room type</label>
